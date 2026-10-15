@@ -1,0 +1,205 @@
+<script>
+var ENGINE_SELECTED = null, LAST_ENERGY = null;
+// key, label, example/default, min, max, step, help
+var ENERGY_BASIC = [
+  ['capacity','Lift capacity (kg)',630,1,50000,1],
+  ['speed','Rated car speed (m/s)',1,.01,20,'any'],
+  ['motorPowerKW','Motor output (kW)',5.5,.01,1000,'any','Use motor nameplate kW.'],
+  ['tripDistance','Average one-way distance (m)',15,.01,1000,'any','Average journey distance, not always the full shaft height.'],
+  ['trips','One-way trips / operating day',200,0,50000,1,'Up + down trips. One round trip counts as two.'],
+  ['tariff','Electricity rate / kWh','',0,100000,'any','Enter the rate from your electricity bill.'],
+  ['lightW','Car lights: total watts',48,0,100000,'any'],
+  ['lightHours','Car light hours / day',16,0,24,'any'],
+  ['fanW','Car fans: total watts',50,0,100000,'any'],
+  ['fanHours','Car fan hours / day',8,0,24,'any']
+];
+var ENERGY_ADVANCED = [
+  ['carMass','Empty car + sling mass (kg)',800,1,100000,'any','Enter the real mass for this lift.'],
+  ['balance','Counterweight balance (%)',40,0,100,'any','Counterweight = empty car mass + this fraction of rated capacity.'],
+  ['upLoad','Average passenger load going up (%)',50,0,100,'any','Percentage of lift capacity.'],
+  ['downLoad','Average passenger load going down (%)',20,0,100,'any'],
+  ['upShare','Share of trips going up (%)',50,0,100,'any'],
+  ['acceleration','Acceleration / deceleration (m/s²)',.5,.01,3,'any'],
+  ['frictionPercent','Equivalent friction (% of moving weight)',3,0,20,'any','Engineering estimate. Calibrate against measured energy.'],
+  ['extraMass','Extra equivalent rotational inertia (kg)',100,0,100000,'any'],
+  ['mechanicalEfficiency','Transmission efficiency (%)',85,.01,100,'any','Use your machine/transmission estimate; geared and gearless differ.'],
+  ['motorEfficiency','Motor efficiency (%)',90,.01,100,'any'],
+  ['driveEfficiency','Elevator drive efficiency (%)',95,.01,100,'any'],
+  ['regenEfficiency','Effective regeneration recovery (%)',0,0,100,'any','Keep 0 for a braking-resistor system. Use a verified recovery value for a regenerative system.'],
+  ['controlW','Standing controller / standby load (W)',80,0,100000,'any','Always-on control load, excluding the light and fan entered above. Applied 24 h/day.'],
+  ['brakeW','Brake coil total watts while moving',324,0,100000,'any'],
+  ['doorW','Door drive watts while operating',150,0,100000,'any'],
+  ['doorSeconds','Door operating seconds / trip',10,0,600,'any'],
+  ['monthDays','Calendar days in month',30,1,31,1],
+  ['monthActiveDays','Days with trips in month',30,0,31,1],
+  ['yearDays','Calendar days in year',365,365,366,1],
+  ['yearActiveDays','Days with trips in year',365,0,366,1]
+];
+var SOLAR_BASIC = [
+  ['motorPowerKW','Motor output (kW)',5.5,.01,1000,'any'],
+  ['motorCurrent','Motor nameplate current (A)','',.01,10000,'any','Required for elevator drive current selection.'],
+  ['voltage','Three-phase line voltage (V)',400,100,1000,'any'],
+  ['auxiliaryW','Lights + fan + controls + brake (W)',502,0,100000,'any','Loads that can be on together, excluding the traction motor.'],
+  ['dailyKWh','Daily AC energy required (kWh)',10,0,100000,'any','Use your meter or copy the Energy Bill result.'],
+  ['solarCoverage','Daily energy supplied by solar (%)',100,0,100,'any','Energy target. This does not mean continuous solar-only operation.'],
+  ['sunHours','Design peak sun hours / day',4,.1,12,'any','Use your location and design-season irradiance. 4 is an example.'],
+  ['panelW','One panel rated watts',550,1,2000,'any'],
+  ['backupHours','Battery backup duration (hours)',2,.01,168,'any'],
+  ['backupDuty','Motor running time during backup (%)',10,0,100,'any','Example: 10 means 6 minutes running per hour. Auxiliaries run throughout backup.']
+];
+var SOLAR_ADVANCED = [
+  ['motorEfficiency','Motor efficiency (%)',90,.01,100,'any'],
+  ['driveEfficiency','Elevator drive efficiency (%)',95,.01,100,'any'],
+  ['inputPF','True input power factor (%)',90,.01,100,'any','Elevator controller input PF, including distortion; not motor cos φ.'],
+  ['margin','AC supply & backup energy margin (%)',25,0,100,'any'],
+  ['surgePercent','Short-duration motor demand (%)',150,100,400,'any','Use the required elevator acceleration/overload duty.'],
+  ['surgeSeconds','Required overload duration (seconds)',60,1,600,1],
+  ['solarYield','Overall PV-to-load yield (%)',70,.01,100,'any','Includes temperature, soiling, wiring, conversion and storage losses for your system.'],
+  ['inverterEfficiency','Battery inverter efficiency (%)',92,.01,100,'any'],
+  ['batteryEfficiency','Battery discharge efficiency (%)',95,.01,100,'any'],
+  ['dod','Usable battery depth of discharge (%)',80,.01,100,'any'],
+  ['retainedCapacity','Battery capacity at replacement (%)',80,.01,100,'any','Allows for ageing.'],
+  ['moduleV','Battery module nominal voltage (V)',51.2,1,1000,'any','Must match the chosen inverter battery input.'],
+  ['minimumV','Minimum operating battery voltage (V)',44.8,1,1000,'any','Use the supported battery/inverter cutoff voltage.'],
+  ['moduleAh','One battery module capacity (Ah)',100,1,100000,'any'],
+  ['moduleCurrent','One module continuous discharge (A)',100,.01,100000,'any','Use module/BMS datasheet limit.'],
+  ['modulePeakCurrent','One module peak discharge (A)',150,.01,100000,'any','Use module/BMS datasheet limit.'],
+  ['modulePeakSeconds','Module peak-current rating duration (s)',10,1,3600,'any','For longer overloads, the calculator uses the module continuous current limit.'],
+  ['parallelLimit','Manufacturer maximum parallel modules',8,1,1000,1]
+];
+
+function engineFields(prefix, fields) {
+  return '<div class="engineering-grid">' + fields.map(function (f) {
+    var id = prefix + '-' + f[0];
+    return '<div class="field"><label for="' + id + '">' + esc(f[1]) + '</label>' +
+      '<input type="number" inputmode="' + (f[5] === 1 ? 'numeric' : 'decimal') + '" id="' + id + '" value="' + esc(f[2]) + '" min="' + f[3] + '" max="' + f[4] + '" step="' + f[5] + '">' +
+      (f[6] ? '<small>' + esc(f[6]) + '</small>' : '') + '</div>';
+  }).join('') + '</div>';
+}
+function renderEngineeringForms() {
+  $('energyForm').innerHTML = '<p class="note example-note">Example values are prefilled. Replace them with your lift data; expand the assumptions before using the result.</p>' +
+    '<button class="btn ghost sm" onclick="useSelectedLift(\'energy\')">Use selected lift / motor</button>' +
+    engineFields('en', ENERGY_BASIC) +
+    '<div class="field currency-field"><label for="en-currency">Currency</label><input id="en-currency" value="BDT" maxlength="12"></div>' +
+    '<details class="assumptions"><summary>Lift balance, losses &amp; operating days</summary>' + engineFields('en', ENERGY_ADVANCED) + '</details>' +
+    '<button id="energyBtn" class="btn" onclick="calcEnergyBill()">Calculate energy &amp; cost</button>';
+  $('solarForm').innerHTML = '<p class="note example-note">Sourcing estimate for an AC solar/battery supply feeding the existing elevator controller. Example settings require review.</p>' +
+    '<div class="engineering-actions"><button class="btn ghost sm" onclick="useSelectedLift(\'solar\')">Use selected motor</button>' +
+    '<button class="btn ghost sm" onclick="useEnergyForSolar()">Use latest energy result</button></div>' + engineFields('so', SOLAR_BASIC) +
+    '<details class="assumptions"><summary>Inverter duty, battery module &amp; losses</summary>' + engineFields('so', SOLAR_ADVANCED) + '</details>' +
+    '<button id="solarBtn" class="btn" onclick="calcSolarSizing()">Calculate sourcing requirements</button>';
+}
+function engineInput(prefix, basic, advanced) {
+  var input = {};
+  basic.concat(advanced).forEach(function (f) { input[f[0]] = $(prefix + '-' + f[0]).value; });
+  return input;
+}
+function engineWarnings(items) {
+  return (items || []).map(function (w) { return '<div class="msg info">' + esc(w) + '</div>'; }).join('');
+}
+function engineN(n, places) { return Number(n).toLocaleString(undefined, {minimumFractionDigits: places || 0, maximumFractionDigits: places || 0}); }
+function engineMetric(label, value, unit) {
+  return '<div class="engineering-metric"><span>' + esc(label) + '</span><b>' + esc(value) + '</b><small>' + esc(unit) + '</small></div>';
+}
+function invalidateEnergy() {
+  LAST_ENERGY = null;
+  $('energyResult').innerHTML = '';
+}
+function bindEngineInvalidation() {
+  $('energyForm').addEventListener('input', invalidateEnergy);
+  $('solarForm').addEventListener('input', function () { $('solarResult').innerHTML = ''; });
+}
+function useSelectedLift(which) {
+  if (!ENGINE_SELECTED) { showMsg('First search components and open a motor recommendation. Then return to this calculator.', 'info'); return; }
+  var values = {};
+  ENGINE_SELECTED.categories.forEach(function (c) { c.items.forEach(function (it) { values[it.label] = it.value; }); });
+  var motor = Number(values['Motor Power (kW)']);
+  if (!(motor > 0)) { showMsg('The selected motor has no numeric kW value. Enter its nameplate rating manually.', 'error'); return; }
+  if (which === 'energy') {
+    $('en-capacity').value = ENGINE_SELECTED.inputs.capacity;
+    $('en-speed').value = ENGINE_SELECTED.inputs.speed;
+    $('en-motorPowerKW').value = motor;
+    invalidateEnergy();
+  } else {
+    $('so-motorPowerKW').value = motor;
+    var amps = parseFloat(values['Motor Rated Current (A)']);
+    $('so-motorCurrent').value = isFinite(amps) && amps > 0 ? amps : '';
+    $('solarResult').innerHTML = '';
+  }
+  showMsg('Selected motor copied. Review the remaining lift and operating assumptions.', 'success');
+}
+function useEnergyForSolar() {
+  if (!LAST_ENERGY) { showMsg('Calculate Energy Bill first, then use this button.', 'info'); return; }
+  $('so-dailyKWh').value = LAST_ENERGY.dailyKWh;
+  $('so-motorPowerKW').value = LAST_ENERGY.motorPowerKW;
+  $('so-auxiliaryW').value = LAST_ENERGY.auxiliaryW;
+  $('so-backupDuty').value = Math.round(LAST_ENERGY.movingHours / 24 * 10000) / 100;
+  $('solarResult').innerHTML = '';
+  showMsg('Daily energy, motor kW, auxiliaries and average daily running share copied. Adjust backup running share for your actual outage period.', 'success');
+}
+function calcEnergyBill() {
+  var input = engineInput('en', ENERGY_BASIC, ENERGY_ADVANCED);
+  input.currency = $('en-currency').value;
+  var signature = JSON.stringify(input), btn = $('energyBtn');
+  LAST_ENERGY = null;
+  $('energyResult').innerHTML = '';
+  busy(btn, true, 'Calculating...');
+  google.script.run.withSuccessHandler(function (r) {
+    busy(btn, false);
+    var current = engineInput('en', ENERGY_BASIC, ENERGY_ADVANCED); current.currency = $('en-currency').value;
+    if (JSON.stringify(current) !== signature) { showMsg('Inputs changed while calculating. Calculate again.', 'info'); return; }
+    LAST_ENERGY = r;
+    var html = '<div class="engineering-metrics">' + engineMetric('Daily', engineN(r.dailyKWh, 2), 'kWh / operating day') +
+      engineMetric('Monthly', engineN(r.monthlyKWh, 2), 'kWh / selected month') + engineMetric('Annually', engineN(r.annualKWh, 2), 'kWh / selected year') + '</div>';
+    if (r.dailyCost !== null) html += '<div class="engineering-metrics cost-metrics">' +
+      engineMetric('Daily energy cost', engineN(r.dailyCost, 2), r.currency) + engineMetric('Monthly energy cost', engineN(r.monthlyCost, 2), r.currency) +
+      engineMetric('Annual energy cost', engineN(r.annualCost, 2), r.currency) + '</div><p class="note">Energy charge at your entered flat rate. VAT, demand charges, fixed charges and tariff slabs are not included.</p>';
+    html += '<details class="assumptions"><summary>Daily energy breakdown &amp; assumptions</summary>' + kvHtml([
+      ['Traction electricity before recovery', r.tractionKWh + ' kWh'], ['Brake coils', r.brakeKWh + ' kWh'],
+      ['Door operation', r.doorKWh + ' kWh'], ['Lights + fan + standing controls', r.standingKWh + ' kWh'],
+      ['Estimated regeneration credit', r.recoveredKWh + ' kWh'], ['Counterweight mass', r.counterweightKg + ' kg'],
+      ['Time per average trip', r.tripSeconds + ' s'], ['Moving time per day', r.movingHours + ' h'],
+      ['Peak estimated shaft demand', r.peakShaftKW + ' kW'],
+      ['Month: operating / calendar days', r.monthActiveDays + ' / ' + r.monthDays],
+      ['Year: operating / calendar days', r.yearActiveDays + ' / ' + r.yearDays]
+    ]) + '<p class="note">Standing controls and the entered light/fan hours apply on non-trip days too. This trip model is an engineering estimate, not an ISO energy-class certificate.</p></details>' + engineWarnings(r.warnings);
+    html += '<button class="btn ghost" onclick="openCalcPane(\'solar\'); useEnergyForSolar();">Use this result for solar sizing</button>';
+    $('energyResult').innerHTML = html;
+    track('Energy Bill Calculation', 'Capacity=' + input.capacity + ' kg; trips/day=' + input.trips + '; energy=' + r.dailyKWh + ' kWh/day');
+  }).withFailureHandler(function (err) { busy(btn, false); fail(err); }).calculateEnergyBill(T(), input);
+}
+function calcSolarSizing() {
+  var input = engineInput('so', SOLAR_BASIC, SOLAR_ADVANCED), signature = JSON.stringify(input), btn = $('solarBtn');
+  $('solarResult').innerHTML = '';
+  busy(btn, true, 'Calculating...');
+  google.script.run.withSuccessHandler(function (r) {
+    busy(btn, false);
+    if (JSON.stringify(engineInput('so', SOLAR_BASIC, SOLAR_ADVANCED)) !== signature) { showMsg('Inputs changed while calculating. Calculate again.', 'info'); return; }
+    var html = '<div class="engineering-metrics">' + engineMetric('AC supply minimum', engineN(r.inverterKW, 2), 'kW continuous') +
+      engineMetric('Battery bank', engineN(r.bankKWh, 2), 'kWh nominal') + engineMetric('Solar panels', r.panelCount, r.panelW + ' W each') + '</div>';
+    if (!r.configurationValid) html += '<div class="msg error">Battery module configuration exceeds its parallel limit. Change the battery module or system voltage before selection.</div>';
+    html += '<h4>1. Elevator motor drive / controller</h4>' + kvHtml([
+      ['Motor power class for sourcing', r.driveClassKW + ' kW or larger'], ['Required continuous motor output current', 'At least ' + r.driveCurrentA + ' A'],
+      ['Required motor overload current', r.drivePeakCurrentA + ' A for ' + r.overloadSeconds + ' s']
+    ]) + '<p class="note">Keep an elevator-rated drive with the correct motor technology, brake control and feedback. kW class alone does not establish compatibility.</p>';
+    html += '<h4>2. Three-phase solar / battery AC supply</h4>' + kvHtml([
+      ['AC voltage', r.voltage + ' V line-to-line, three-phase'], ['Minimum continuous active power', r.inverterKW + ' kW'],
+      ['Minimum continuous apparent power', r.inverterKVA + ' kVA'], ['Minimum AC line current', r.inverterCurrentA + ' A'],
+      ['Required short-duration active power', r.inverterPeakKW + ' kW for ' + r.overloadSeconds + ' s'],
+      ['Required short-duration apparent power', r.inverterPeakKVA + ' kVA for ' + r.overloadSeconds + ' s']
+    ]);
+    html += '<h4>3. Battery modules</h4>' + kvHtml([
+      ['Energy during selected backup window', r.backupEnergyKWh + ' kWh AC'], ['Required nominal battery energy', r.requiredBatteryKWh + ' kWh'],
+      ['Module quantity in parallel', r.moduleCount + ' at ' + r.moduleVoltage + ' V nominal'], ['Selected bank capacity', r.bankAh + ' Ah / ' + r.bankKWh + ' kWh'],
+      ['Usable AC energy after losses and ageing', r.usableACKWh + ' kWh'], ['Required continuous DC current', r.dcCurrentA + ' A'],
+      ['Required peak DC current', r.dcPeakCurrentA + ' A'], ['Minimum modules: energy / continuous / peak', r.energyModuleCount + ' / ' + r.continuousModuleCount + ' / ' + r.peakModuleCount]
+    ]);
+    html += '<h4>4. Solar panel array</h4>' + kvHtml([
+      ['Required array for daily energy target', r.pvRequiredKWp + ' kWp'], ['Panel quantity', r.panelCount + ' × ' + r.panelW + ' W'],
+      ['Selected array nameplate', r.installedPVKWp + ' kWp'], ['Estimated daily energy at design sun hours', r.pvDailyKWh + ' kWh']
+    ]) + engineWarnings(r.warnings);
+    $('solarResult').innerHTML = html;
+    track('Solar Sizing Calculation', 'Motor=' + input.motorPowerKW + ' kW; modules=' + r.moduleCount + '; PV=' + r.installedPVKWp + ' kWp');
+  }).withFailureHandler(function (err) { busy(btn, false); fail(err); }).calculateSolarSizing(T(), input);
+}
+</script>

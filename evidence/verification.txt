@@ -1,0 +1,1 @@
+All browser E2E checks passed. Live API calls were simulated; no real Sheet writes/accounts were used. Native OS print/share and phone behavior require device verification.
