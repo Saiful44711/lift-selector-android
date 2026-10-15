@@ -43,6 +43,10 @@ public class MainActivity extends BridgeActivity {
  @Override public void onCreate(Bundle savedInstanceState) { registerPlugin(LiftPrintPlugin.class); super.onCreate(savedInstanceState); }
 }
 `);
+  const stringsPath='android/app/src/main/res/values/strings.xml';
+  let strings=await fs.readFile(stringsPath,'utf8');
+  strings=strings.replace(/(<string name="(?:app_name|title_activity_main)">)[^<]*(<\/string>)/g,'$1WLF Electrical Solution$2');
+  await fs.writeFile(stringsPath,strings);
   await fs.chmod('android/gradlew',0o755);
   for(const density of ['mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi']){const dir='android/app/src/main/res/mipmap-'+density;await fs.mkdir(dir,{recursive:true});for(const name of ['ic_launcher.png','ic_launcher_round.png'])await fs.copyFile('web/icon-512.png',dir+'/'+name);}
   await fs.rm('android/app/src/main/res/drawable/ic_launcher_foreground.xml',{force:true});
@@ -54,7 +58,7 @@ public class MainActivity extends BridgeActivity {
   let gradle=await fs.readFile('android/app/build.gradle','utf8');
   const versionCode=Number(process.env.LIFT_VERSION_CODE||10000+Number(process.env.GITHUB_RUN_NUMBER||1));
   if(!Number.isSafeInteger(versionCode)||versionCode<1||versionCode>2100000000)throw new Error('Invalid Android versionCode; set LIFT_VERSION_CODE to a positive integer below 2100000001.');
-  gradle=gradle.replace(/versionName\s+"[^"]*"/, 'versionName "1.1.0"');
+  gradle=gradle.replace(/versionName\s+"[^"]*"/, 'versionName "1.2.0"');
   gradle=gradle.replace(/versionCode\s+\d+/, 'versionCode '+versionCode);
   if(!gradle.includes('LIFT_STORE_FILE'))gradle+=`\n// Optional release signing. Never used for debug builds.\nandroid {\n if (System.getenv('LIFT_STORE_FILE')) {\n  signingConfigs { release { storeFile file(System.getenv('LIFT_STORE_FILE')); storePassword System.getenv('LIFT_STORE_PASSWORD'); keyAlias System.getenv('LIFT_KEY_ALIAS'); keyPassword System.getenv('LIFT_KEY_PASSWORD') } }\n  buildTypes { release { signingConfig signingConfigs.release } }\n }\n}\n`;
   await fs.writeFile('android/app/build.gradle',gradle);

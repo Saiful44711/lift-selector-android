@@ -32,12 +32,13 @@ async function apiCall(action,args){
     else if(action==='getComponentDetails'&&SESSION&&LiftCore.can(SESSION.role,action)&&cache.details&&cache.details[args[1]])result=cache.details[args[1]];
     else throw new Error('Offline: login, approvals and component changes need internet. Saved calculations can use the outbox.');
   }else result=await rpc(action,args);
+  if(action==='refreshIndex'&&SESSION){var cache=readStore(scopedKey('cache'),{});if(cache.session&&cache.session.email===SESSION.email){cache.session.index=result.index;cache.session.componentDetails=result.componentDetails||{};if(result.componentDetails)cache.details=Object.assign(cache.details||{},result.componentDetails);writeStore(scopedKey('cache'),cache);}}
   if(action==='getComponentDetails'&&APK_SETTINGS.mode==='live'){var cache=readStore(scopedKey('cache'),{});cache.details=cache.details||{};cache.details[args[1]]=result;writeStore(scopedKey('cache'),cache);}
   if(/^calculate/.test(action))LAST_CALC={action:action,inputs:JSON.parse(JSON.stringify(args[1])),result:result};
   return result;
 }
 var google={script:{get run(){var success=function(){},failure=function(){};var handler={get:function(target,key){if(key==='withSuccessHandler')return function(fn){success=fn;return new Proxy(target,handler);};if(key==='withFailureHandler')return function(fn){failure=fn;return new Proxy(target,handler);};return function(){var args=Array.prototype.slice.call(arguments);Promise.resolve().then(function(){return apiCall(key,args);}).then(success).catch(failure);};}};return new Proxy({},handler);}}};
-function cacheSession(session){var cache=readStore(scopedKey('cache'),{});if(cache.session&&cache.session.email!==session.email)cache={};cache.session=session;writeStore(scopedKey('cache'),cache);setTimeout(function(){syncOutbox(true);},0);}
+function cacheSession(session){var cache=readStore(scopedKey('cache'),{});if(cache.session&&cache.session.email!==session.email)cache={};cache.session=session;if(session.componentDetails)cache.details=Object.assign(cache.details||{},session.componentDetails);writeStore(scopedKey('cache'),cache);setTimeout(function(){syncOutbox(true);},0);}
 function applyTheme(){var dark=APK_SETTINGS.theme==='dark'||APK_SETTINGS.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light';document.body.classList.toggle('motion-on',!!APK_SETTINGS.motion);}
 function cycleTheme(){APK_SETTINGS.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';writeStore('lift-settings',APK_SETTINGS);applyTheme();}
 function refreshShell(){document.getElementById('modeBadge').textContent='LIVE DATA';document.getElementById('connectionBadge').textContent=navigator.onLine?'Online':'Offline · saved data';applyTheme();}

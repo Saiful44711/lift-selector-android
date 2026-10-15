@@ -128,7 +128,7 @@ function doRegister() {
     .register($('regName').value, $('regEmail').value, $('regPassword').value);
 }
 function forceLogout(msg) {
-  clearToken(); SESSION = null; INDEX = []; ENGINE_SELECTED = null; LAST_ENERGY = null;
+  clearToken(); clearComponentDetails(); SESSION = null; INDEX = []; ENGINE_SELECTED = null; LAST_ENERGY = null;
   showAuth();
   switchAuthTab('login');
   if (msg) setAuthMsg(msg, 'info');
@@ -162,7 +162,7 @@ function startApp(s) {
     });
     navBound = true;
   }
-  setIndex(s.index);
+  setIndex(s.index); seedComponentDetails(s.componentDetails);
   openTab('selection');
 }
 
@@ -226,6 +226,7 @@ function fillSelect(id, values, keepValue, placeholder) {
 }
 
 function setIndex(idx) {
+  clearComponentDetails();
   var firstLoad = !INDEX.length;
   INDEX = idx || [];
   indexStamp = Date.now();
@@ -268,7 +269,7 @@ function maybeRefreshIndex() {
 function refreshIndexNow() {
   google.script.run.withSuccessHandler(function (r) {
     if (r.error) { showMsg(r.error, 'error'); return; }
-    setIndex(r.index);
+    setIndex(r.index); seedComponentDetails(r.componentDetails);
   }).withFailureHandler(function () {}).refreshIndex(T());
 }
 
@@ -305,15 +306,14 @@ function showDetails(sheetRow, chip, btn) {
   document.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
   if (chip) chip.classList.add('active');
   if (btn) busy(btn, true, 'Loading...');
-  google.script.run.withSuccessHandler(function (d) { if (btn) busy(btn, false); renderReport(d); })
-    .withFailureHandler(failWith(btn)).getComponentDetails(T(), sheetRow);
+  loadComponentDetails(sheetRow).then(function(d){if(btn)busy(btn,false);renderReport(d);}).catch(failWith(btn));
 }
 
 function renderReport(d) {
   ENGINE_SELECTED = d;
   var i = d.inputs;
   var html = '<div class="report-head"><div class="logo-mark"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3v18"/><path d="M8.5 9.5L8.5 7M7 8.2l1.5-1.5L10 8.2"/><path d="M15.5 14.5V17M14 15.8l1.5 1.5 1.5-1.5"/></svg></div>' +
-    '<div><h2>Lift Component Selection Report</h2><p>Generated ' + esc(new Date().toLocaleString()) +
+    '<img class="report-company-logo" src="' + companyLogoURL() + '" alt="Walton Lift"><div><h2>Lift Component Selection Report</h2><p>Generated ' + esc(new Date().toLocaleString()) +
     ' &middot; Prepared by ' + esc(SESSION.name) + '</p></div></div>';
   html += '<table class="crit"><tr><th>Capacity</th><th>Speed</th><th>Usage Type</th><th>Roping</th></tr><tr>' +
     '<td>' + esc(i.capacity) + ' kg</td><td>' + esc(i.speed) + ' m/s</td><td>' + esc(i.usageType) + '</td><td>' + esc(i.roping) + '</td></tr></table>';
@@ -380,7 +380,7 @@ function profileSvg(t1, t2, total) {
 
 function calcTravelTime() {
   var input = { height: $('tt-height').value, speed: $('tt-speed').value, accDec: $('tt-acc').value };
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     var html = kvHtml([
       ['Acc/Dec time (t1)', r.t1 + ' s'],
       ['Acc/Dec distance', r.accelDistance + ' m'],
@@ -404,7 +404,7 @@ function calcPower() {
     panelLightQty: $('pw-panel').value, spotLightQty: $('pw-spot').value,
     crossFlowFanQty: $('pw-fan').value, othersFixedW: $('pw-others').value
   };
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     $('pwResult').innerHTML = kvHtml([
       ['Drive power', r.drivePowerW + ' W'],
       ['Brake power', r.brakePowerW + ' W'],
@@ -413,7 +413,6 @@ function calcPower() {
       ['Car fan', r.carFanW + ' W'],
       ['Others', r.othersFixedW + ' W'],
       ['Total power', r.totalPowerKW + ' kW', true],
-      ['Suggested AVR', r.suggestAVRKVA + ' kVA', true],
       ['Suggested generator', r.suggestGeneratorKVA + ' kVA', true]
     ]);
     track('Power Calculation', JSON.stringify(input));
@@ -437,8 +436,8 @@ function calcSpeedSlip() {
     ratedRpm: $('ss-rpm').value, frequency: $('ss-freq').value, poles: $('ss-poles').value
   };
   $('ssResult').innerHTML = '<p class="note">Calculating...</p>';
-  google.script.run.withSuccessHandler(function (r) {
-    var rows = [['Lift car speed', r.carSpeed.toFixed(4) + ' m/s', true], ['Traction sheave speed', r.sheaveRpm + ' rpm']];
+  calculatorRun().withSuccessHandler(function (r) {
+    var rows = [['Lift Nominal Car Speed', r.carSpeed.toFixed(4) + ' m/s', true], ['Traction sheave speed', r.sheaveRpm + ' rpm']];
     if (r.motorType === 'Geared') {
       rows.push(['Gear reduction ratio', r.gearRatio + ':1']);
       rows.push(['Synchronous motor speed', r.syncRpm + ' rpm']);
@@ -457,7 +456,7 @@ function calcSpeedSlip() {
 
 function calcMotorPower() {
   var input = { ratedRpm: $('mp-rpm').value, torque: $('mp-torque').value };
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     $('mpResult').innerHTML = kvHtml([['Motor power required', r.motorPowerKW.toFixed(2) + ' kW', true]]) +
       '<p class="note">Motor power (kW) = Torque (Nm) &times; RPM &divide; 9550.</p>';
     track('Motor Power Justification', JSON.stringify(input));
@@ -756,7 +755,7 @@ function calcEnergyBill() {
   LAST_ENERGY = null;
   $('energyResult').innerHTML = '';
   busy(btn, true, 'Calculating...');
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     busy(btn, false);
     var current = engineInput('en', ENERGY_BASIC, ENERGY_ADVANCED); current.currency = $('en-currency').value;
     if (JSON.stringify(current) !== signature) { showMsg('Inputs changed while calculating. Calculate again.', 'info'); return; }
@@ -784,7 +783,7 @@ function calcSolarSizing() {
   var input = engineInput('so', SOLAR_BASIC, SOLAR_ADVANCED), signature = JSON.stringify(input), btn = $('solarBtn');
   $('solarResult').innerHTML = '';
   busy(btn, true, 'Calculating...');
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     busy(btn, false);
     if (JSON.stringify(engineInput('so', SOLAR_BASIC, SOLAR_ADVANCED)) !== signature) { showMsg('Inputs changed while calculating. Calculate again.', 'info'); return; }
     var html = '<div class="engineering-metrics">' + engineMetric('AC supply minimum', engineN(r.inverterKW, 2), 'kW continuous') +

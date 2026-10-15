@@ -1,6 +1,6 @@
 // Only the packaged public interface is cached. API responses are never cached here.
-const CACHE='lift-interface-v2';
-const ASSETS=['./','./index.html','./style.css','./shell.css','./app.js','./transport.js','./logic.js','./native.js','./icon-192.png','./icon-512.png'];
+const CACHE='lift-interface-v3';
+const ASSETS=['./','./index.html','./style.css','./shell.css','./app.js','./ui-helpers.js','./company-logo.png','./transport.js','./logic.js','./native.js','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('lift-interface-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

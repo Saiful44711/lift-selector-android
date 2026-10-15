@@ -144,7 +144,7 @@ function calcEnergyBill() {
   LAST_ENERGY = null;
   $('energyResult').innerHTML = '';
   busy(btn, true, 'Calculating...');
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     busy(btn, false);
     var current = engineInput('en', ENERGY_BASIC, ENERGY_ADVANCED); current.currency = $('en-currency').value;
     if (JSON.stringify(current) !== signature) { showMsg('Inputs changed while calculating. Calculate again.', 'info'); return; }
@@ -172,7 +172,7 @@ function calcSolarSizing() {
   var input = engineInput('so', SOLAR_BASIC, SOLAR_ADVANCED), signature = JSON.stringify(input), btn = $('solarBtn');
   $('solarResult').innerHTML = '';
   busy(btn, true, 'Calculating...');
-  google.script.run.withSuccessHandler(function (r) {
+  calculatorRun().withSuccessHandler(function (r) {
     busy(btn, false);
     if (JSON.stringify(engineInput('so', SOLAR_BASIC, SOLAR_ADVANCED)) !== signature) { showMsg('Inputs changed while calculating. Calculate again.', 'info'); return; }
     var html = '<div class="engineering-metrics">' + engineMetric('AC supply minimum', engineN(r.inverterKW, 2), 'kW continuous') +

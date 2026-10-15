@@ -17,3 +17,15 @@ test('server outbox retries are idempotent and another account cannot reuse an I
  assert.equal(c.saveEngineeringRecord('token',record).synced,true);assert.equal(c.saveEngineeringRecord('token',record).duplicate,true);assert.equal(rows.length,2);
  email='second@example.test';assert.throws(()=>c.saveEngineeringRecord('token',record),/another account/);assert.equal(c.listEngineeringRecords('token').length,0);assert.equal(released,3);
 });
+test('Total Power retains the existing generator formula and values',()=>{
+ const r=core.calculate('calculatePowerAndAVR',{motorPowerKW:3.9,k2:.95,k3:.95,brakePowerBothW:324,tubeLightQty:4,panelLightQty:0,spotLightQty:4,crossFlowFanQty:2,othersFixedW:500});
+ assert.equal(r.totalPowerKW,4.6228);assert.equal(r.suggestGeneratorKVA,8.668);assert.equal(r.suggestAVRKVA,11.557);
+});
+test('component bootstrap exposes only existing public report fields and bounds payload',()=>{
+ const c={LiftCore:core};vm.createContext(c);vm.runInContext(fs.readFileSync('backend/Code.gs','utf8'),c);
+ const headers=['Capacity (KG)','Speed (m/s)','Usage Type','Roping','Motor brand','Motor Model','Motor Type','InternalCost'];
+ const record={sheetRow:3,values:[630,1,'MR','2:1','Fictional','DEMO','Gearless','SECRET_INTERNAL_COST']};
+ c.readComponents_=()=>({headers,records:[record]});const snapshot=c.getSelectionDetails_();assert.equal(snapshot[3].inputs.capacity,630);assert.equal(JSON.stringify(snapshot).includes('SECRET_INTERNAL_COST'),false);
+ assert.deepEqual(JSON.parse(JSON.stringify(snapshot[3])),JSON.parse(JSON.stringify(c.componentDetailsFromRecord_(headers,record))));
+ c.readComponents_=()=>({headers,records:Array.from({length:1000},(_,i)=>({...record,sheetRow:i+3}))});assert.equal(Object.keys(c.getSelectionDetails_()).length,0);
+});

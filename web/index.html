@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><title>Lift Selector</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><title>WLF Electrical Solution</title>
   <meta charset="utf-8">
   <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shell.css">
 </head>
@@ -10,24 +10,24 @@
   <!-- ================= LOADING ================= -->
   <div id="loadingScreen" class="splash">
     <div class="spinner"></div>
-    <div>Loading Lift Component Selector...</div>
+    <div>Loading WLF Electrical Solution...</div>
   </div>
 
   <!-- ================= LOGIN / REGISTER ================= -->
   <div id="authScreen" class="auth hidden">
-    <div class="auth-hero">
+    <div class="auth-hero"><img class="auth-company-logo" src="company-logo.png" alt="Walton Lift">
       <div class="logo">
         <div class="logo-mark">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3v18"/><path d="M8.5 9.5L8.5 7M7 8.2l1.5-1.5L10 8.2"/><path d="M15.5 14.5V17M14 15.8l1.5 1.5 1.5-1.5"/></svg>
         </div>
-        <div>Lift Electrical R&amp;I<br><small style="font-weight:500;color:#a5b4fc;font-size:12px;">Component Selector</small></div>
+        <div>WLF Electrical Solution<br><small style="font-weight:500;color:#a5b4fc;font-size:12px;">Component Selector</small></div>
       </div>
       <div>
         <h1>Select the right <span>lift components</span> in seconds.</h1>
         <p>Motor, controller, brake resistor, UPS/ARD, AVR, main cable and SDB breaker &mdash; all from one trusted data source, with ready-to-print A4 reports.</p>
-        <div class="feat">
+        <div class="hero-calculations"><div class="calculation-directory" aria-label="Available calculations"><span>Travel Time</span><span>Total Power</span><span>Nominal Speed &amp; Slip frequency</span><span>Motor Power</span><span>Energy Bill</span><span>Solar / Battery</span></div></div><div class="feat">
           <div><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></i>Instant motor &amp; controller recommendations</div>
-          <div><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></i>Travel time, power, AVR &amp; generator calculations</div>
+          <div><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></i>All six lift engineering calculations</div>
           <div><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></i>Secure, role-based access managed by the admin</div>
         </div>
       </div>
@@ -35,7 +35,7 @@
     </div>
 
     <div class="auth-panel">
-      <div class="auth-card">
+      <div class="login-brand"><img src="company-logo.png" alt="Walton Lift"><strong>WLF Electrical Solution</strong></div><div class="calculation-directory" aria-label="Available calculations"><span>Travel Time</span><span>Total Power</span><span>Nominal Speed &amp; Slip frequency</span><span>Motor Power</span><span>Energy Bill</span><span>Solar / Battery</span></div><div class="auth-card">
         <div class="auth-tabs">
           <button id="tabLogin" class="active" onclick="switchAuthTab('login')">Log in</button>
           <button id="tabRegister" onclick="switchAuthTab('register')">Request access</button>
@@ -71,7 +71,7 @@
         <div class="logo-mark">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3v18"/><path d="M8.5 9.5L8.5 7M7 8.2l1.5-1.5L10 8.2"/><path d="M15.5 14.5V17M14 15.8l1.5 1.5 1.5-1.5"/></svg>
         </div>
-        <div>Lift Selector<small>Lift Electrical R&amp;I</small></div>
+        <div>WLF Electrical<br>Solution<small>Lift Electrical R&amp;I</small></div>
       </div>
 
       <nav class="nav" id="nav">
@@ -116,7 +116,7 @@
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
     <main class="main">
-      <div class="topbar no-print">
+      <div class="topbar no-print"><img class="header-company-logo" src="company-logo.png" alt="Walton Lift">
         <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
@@ -173,8 +173,8 @@
         <section id="tab-calculation" class="tab-content hidden">
           <div class="seg" id="calcSeg">
             <button class="active" data-pane="travel">Travel Time</button>
-            <button data-pane="power">Power / AVR</button>
-            <button data-pane="speed">Speed &amp; Slip</button>
+            <button data-pane="power">Total Power</button>
+            <button data-pane="speed">Nominal Speed &amp; Slip frequency</button>
             <button data-pane="motor">Motor Power</button>
             <button data-pane="energy">Energy Bill</button>
             <button data-pane="solar">Solar / Battery</button>
@@ -200,7 +200,7 @@
             <div class="card">
               <div class="card-head">
                 <div class="card-icon ci-rose"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></div>
-                <div><h3>Power / AVR / generator calculator</h3><p>Total load, suggested AVR and generator size</p></div>
+                <div><h3>Total Power</h3><p>Total lift load and suggested generator size</p></div>
               </div>
               <div class="row">
                 <div class="field"><label>Motor power (kW)</label><input type="number" inputmode="decimal" id="pw-motor" step="any" placeholder="e.g. 3.9"></div>
@@ -333,7 +333,7 @@
     </main>
   </div>
 
-  <script src="logic.js"></script><script src="native.js"></script><script src="transport.js"></script><script src="app.js"></script>
+  <script src="logic.js"></script><script src="native.js"></script><script src="transport.js"></script><script src="ui-helpers.js"></script><script src="app.js"></script>
 
 <dialog id="settingsDialog"><h2>App settings</h2><p class="note">Live connection is preconfigured. Offline calculators and previously viewed component details are available after an online login. Account and data changes require internet.</p><label for="themeSetting">Appearance</label><select id="themeSetting"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><label><input type="checkbox" id="motionSetting"> Subtle background effect</label><p id="settingsStatus" role="status"></p><div class="engineering-actions"><button class="btn" onclick="applySettings()">Apply settings</button><button class="btn ghost" onclick="document.getElementById('settingsDialog').close()">Close</button></div></dialog>
 <dialog id="recordsDialog"><h2>Saved records &amp; outbox</h2><p id="recordStatus" role="status"></p><div class="engineering-actions"><button class="btn" onclick="syncOutbox()">Sync now</button><button class="btn ghost" onclick="exportRecords()">Export records CSV</button><button class="btn ghost" onclick="document.getElementById('recordsDialog').close()">Close</button></div><div id="recordsList"></div></dialog><div id="apkPrintArea"></div></body>

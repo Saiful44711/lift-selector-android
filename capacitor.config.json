@@ -1,7 +1,13 @@
 {
   "appId": "com.liftselector.engineering",
-  "appName": "Lift Selector",
+  "appName": "WLF Electrical Solution",
   "webDir": "dist",
-  "server": { "androidScheme": "https" },
-  "plugins": { "CapacitorHttp": { "enabled": false } }
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
 }

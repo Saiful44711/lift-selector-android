@@ -96,7 +96,7 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.api === 'ping') return apiJson_({ok:true,version:1});
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
-    .setTitle('Lift Component Selector')
+    .setTitle('WLF Electrical Solution')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -284,6 +284,7 @@ function buildSession_(rec, token) {
   };
   try {
     s.index = getSelectionIndex_();
+    s.componentDetails = getSelectionDetails_();
   } catch (e) {
     s.indexError = String(e && e.message ? e.message : e).replace(/^(Error|Exception):\s*/i, '');
   }
@@ -413,7 +414,7 @@ function getSession(token) {
 function refreshIndex(token) {
   authUser_(token);
   try {
-    return { index: getSelectionIndex_(), error: '' };
+    return { index: getSelectionIndex_(), componentDetails: getSelectionDetails_(), error: '' };
   } catch (e) {
     return { index: [], error: String(e && e.message ? e.message : e).replace(/^(Error|Exception):\s*/i, '') };
   }
@@ -574,7 +575,11 @@ function getComponentDetails(token, sheetRow) {
     if (d.records[i].sheetRow === sheetRow) { rec = d.records[i]; break; }
   }
   if (!rec) throw new Error('This item is no longer available. Please search again.');
-  var m = colMap_(d.headers);
+  return componentDetailsFromRecord_(d.headers,rec);
+}
+
+function componentDetailsFromRecord_(headers, rec) {
+  var m = colMap_(headers);
   function val(name) { var i = m[norm_(name)]; return i === undefined ? '' : rec.values[i]; }
 
   var categories = CATEGORIES.map(function (cat) {
@@ -590,6 +595,18 @@ function getComponentDetails(token, sheetRow) {
     inputs: { capacity: val('Capacity (KG)'), speed: val('Speed (m/s)'), usageType: val('Usage Type'), roping: val('Roping') },
     categories: categories
   };
+}
+
+// Bounded bootstrap snapshot of existing public report fields. Larger datasets use on-demand details.
+function getSelectionDetails_() {
+  var data=readComponents_(),details={},size=0;
+  for(var i=0;i<data.records.length;i++){
+    var record=data.records[i],value=componentDetailsFromRecord_(data.headers,record);
+    size+=JSON.stringify(value).length;
+    if(size>120000)return {}; // Avoid making login responses too large.
+    details[record.sheetRow]=value;
+  }
+  return details;
 }
 
 /* ===================== ADMIN: COMPONENTS EDIT ===================== */
