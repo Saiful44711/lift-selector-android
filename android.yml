@@ -1,0 +1,108 @@
+name: Build Lift Selector APK
+on:
+  workflow_dispatch:
+    inputs:
+      signed_release:
+        description: Build signed release in addition to debug (requires signing secrets)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build packaged UI and identical backend module
+        run: npm run build
+      - name: Check shared logic and API security
+        run: npm test
+      - name: Install browser for end-to-end checks
+        run: npx playwright install --with-deps chromium
+      - name: Verify browser flows and mobile layout
+        run: npm run test:e2e
+      - name: Upload browser verification screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lift-browser-verification
+          path: test-results/
+          if-no-files-found: warn
+      - name: Generate Android project and native plugins
+        run: npm run android:prepare
+      - name: Accept Android SDK licenses for CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$SDK_ROOT" ]]; then echo "::error::Android SDK is missing from this runner."; exit 1; fi
+          SDK_MANAGER=$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | sort | tail -n 1)
+          if [[ -z "$SDK_MANAGER" ]]; then echo "::error::sdkmanager not found under $SDK_ROOT/cmdline-tools"; exit 1; fi
+          set +o pipefail
+          yes | "$SDK_MANAGER" --sdk_root="$SDK_ROOT" --licenses
+          LICENSE_RESULT=${PIPESTATUS[1]}
+          set -o pipefail
+          if [[ "$LICENSE_RESULT" != "0" ]]; then echo "::error::SDK license step failed ($LICENSE_RESULT); see output above."; exit "$LICENSE_RESULT"; fi
+      - name: Discover required SDK and installed tools
+        run: node scripts/sdk-prepare.mjs
+      - name: Compile debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lift-Selector-debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Prepare optional release signing
+        if: github.event_name == 'workflow_dispatch' && inputs.signed_release
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          LIFT_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          LIFT_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          LIFT_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for KEY in KEYSTORE_BASE64 LIFT_STORE_PASSWORD LIFT_KEY_ALIAS LIFT_KEY_PASSWORD; do
+            if [[ -z "${!KEY}" ]]; then echo "::error::Missing signing secret: $KEY. Debug APK was already built."; exit 1; fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/lift-release.jks"
+          echo "LIFT_STORE_FILE=$RUNNER_TEMP/lift-release.jks" >> "$GITHUB_ENV"
+      - name: Compile signed release APK
+        if: github.event_name == 'workflow_dispatch' && inputs.signed_release
+        working-directory: android
+        env:
+          LIFT_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          LIFT_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          LIFT_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+      - name: Upload signed release APK
+        if: github.event_name == 'workflow_dispatch' && inputs.signed_release
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lift-Selector-signed-release-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+      - name: Upload workflow logs and test evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lift-build-diagnostics
+          path: |
+            android/app/build/reports/
+            android/build/reports/
+          if-no-files-found: warn
