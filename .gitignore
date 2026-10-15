@@ -1,0 +1,9 @@
+node_modules/
+android/
+dist/
+test-results/
+*.jks
+*.keystore
+local.properties
+artifacts/
+*.log
