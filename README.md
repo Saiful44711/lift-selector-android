@@ -2,21 +2,20 @@
 
 আপনার PC-তে বর্তমান GitHub / Apps Script লিংক চলবে। মোবাইলে এই package থেকে তৈরি APK ব্যবহার করবেন। দুটিই একই Google Sheet, users, approval ও roles ব্যবহার করে। Company footer আপাতত রাখা হয়নি, আপনার নির্দেশ অনুযায়ী।
 
-**এই ZIP source/build package; এর মধ্যে তৈরি `.apk` নেই।** Browser এবং shared logic-এর পরীক্ষাগুলো পাস করেছে। স্থানীয় Android compile Gradle download-এর `Network is unreachable` / redirect timeout-এ আটকে গেছে। সংযুক্ত GitHub account-এ আপনার repository-র write access নেই, তাই এখানে GitHub Actions চালানো যায়নি। নিচের Actions run হবে আসল Android compile-এর প্রথম যাচাই।
+**Version 1.1.0: install → online login → live use.** এই source ZIP থেকে GitHub Actions-এ নতুন APK build করতে হবে। Production APK-তে Demo data, Data mode switch বা editable Backend URL নেই। Settings শুধু appearance-এর জন্য। Backend URL code-এ নির্দিষ্ট করা আছে।
 
-## আগে demo দেখুন
+## Existing repository update (এইবার শুধু এটি করুন)
 
-[Click to open the working fictional demo](https://lift-selector-android-demo.digitavision-7629.chatgpt.site)
+বর্তমান Apps Script backend বদলাতে হবে না। PC-এর website-ও বদলাতে হবে না।
 
-Demo-তে সব তথ্য **FICTIONAL**। এগুলো বাস্তব component recommendation নয়। একই password: `DemoPass123`।
-
-| কাজ | Demo login |
-|---|---|
-| Admin: approval, users, components, reports | admin@example.test |
-| Engineer: selection এবং সব calculation | full@example.test |
-| Technician: শুধু selection | selection@example.test |
-
-Demo signup local sample user তৈরি করে; email পাঠায় না। Demo record কখনো আপনার Google Sheet-এ sync হয় না। Settings → Data mode দিয়ে পরে Live data চালু করবেন।
+1. ZIP extract করুন। GitHub-এর বর্তমান `Saiful44711/lift-selector-android` repository খুলুন।
+2. **Add file → Upload files** দিয়ে ZIP-এর `web`, `scripts`, `tests` folders এবং `package.json`, `package-lock.json`, `README.md` upload করুন। বাইরের enclosing folder বা ZIP নিজে upload করবেন না। একই path-এর files replace হবে; অন্য files থাকবে।
+3. সব files একটি commit-এ দিন। `web/transport.js`, `web/index.html`, `web/sw.js`, `scripts/android-prepare.mjs`, `tests/e2e.cjs`, **নতুন `tests/demo-fixture.cjs`**, দুই package files এবং README অন্তর্ভুক্ত থাকবে। Fixture শুধু automated tests-এর fictional data; production APK-তে copy হয় না।
+4. `.github/workflows/android.yml` আগেই সঠিক থাকলে বদলানোর দরকার নেই। চাইলে ZIP-এর একই workflow ব্যবহার করুন; `.github/workflows` দুবার করবেন না।
+5. Commit-এর পরে **Actions → latest run** খুলুন। Push-এ build না শুরু হলে **Build Lift Selector APK → Run workflow**, `signed_release` unchecked রাখুন।
+6. Success হলে **Artifacts → Lift-Selector-debug-APK** download ও extract করুন। `app-debug.apk` install করুন।
+7. App খুলেই existing approved email/password দিয়ে login করুন। কোনো URL paste বা Live switch লাগে না।
+8. পুরোনো Debug APK-এর সঙ্গে signing mismatch হলে আগে pending records sync/CSV export করুন। তারপর পুরোনো app uninstall করে নতুন APK install করুন। Uninstall করলে local cache/outbox মুছে যায়। ভবিষ্যৎ স্থায়ী update-এর জন্য একই release signing key ব্যবহার করুন।
 
 ## যে সিদ্ধান্তগুলো ব্যবহার করা হয়েছে
 
@@ -25,9 +24,9 @@ Demo signup local sample user তৈরি করে; email পাঠায় ন�
 | Backend | বর্তমান Google Sheets + একই Apps Script project |
 | Users | বর্তমান accounts, passwords, approval, Admin / Full / Selection roles |
 | PC | বর্তমান web app; APK package আলাদা repository-তে রাখতে পারেন |
-| Android | Capacitor-এ packaged HTML/CSS/JS; প্রথম চালুতে fictional demo |
+| Android | Capacitor-এ packaged HTML/CSS/JS; প্রথম চালুতে Live login |
 | Live login | Existing app email/password; APK-তে Google account chooser লাগে না |
-| Offline | Demo এবং engineering calculation চলে; live প্রথম login অনলাইনে করতে হবে |
+| Offline | প্রথম login অনলাইনে; এরপর offline calculators, cached index, আগে দেখা details ও saved records |
 | Offline entry | Calculation record locally save; own account/backend-এ reconnect হলে outbox sync |
 | Offline admin | Approval, password পরিবর্তন, component edit অনলাইনে করতে হবে |
 | Report | Component print/PDF এবং latest/records CSV; Android-এ system print/share |
@@ -80,15 +79,15 @@ APK-এর জন্য **আলাদা repository** ব্যবহার ক
 
 Build output path: `android/app/build/outputs/apk/debug/app-debug.apk`। Browser screenshots Actions-এর `Lift-browser-verification` artifact-এ পাবেন। Failed compile হলে run-এর failed step খুলে error text দেখুন; diagnostics artifact available হলে সেটিও download করুন।
 
-## 3. APK-তে বাস্তব app connect করবেন
+## 3. APK চালানো
 
-1. App খুললে **FICTIONAL DEMO** দেখা যাবে। আগে demo login দিয়ে layout এবং calculation দেখুন।
-2. ওপরের **Settings → Data mode: Live data**।
-3. **Backend URL**-এ section 1-এর current `/exec` URL paste করুন। Default-এ আপনার আগের URL আছে; অন্য deployment হলে এখানে বদলান। `/dev` বা Google Sheet URL নয়।
-4. **Apply settings** → API connected message হলে নিজের existing approved email/password দিয়ে login করুন।
-5. PC-তে আগের Apps Script/GitHub link ব্যবহার করুন। নতুন repository-র GitHub Pages চালু করা প্রয়োজন নেই।
-
-Backend code install/deploy না করা পর্যন্ত real login API কাজ করবে না; APK/demo তৈরি করতে backend install বাধ্যতামূলক নয়। Clickable demo-টি sample পরীক্ষা করার জন্য; PC-র real production কাজ বর্তমান web app-এ করুন। Live browser API fetch Google redirect/CORS policy-তে আটকে যেতে পারে; APK native HTTP ব্যবহার করে।
+1. App খুলুন → নিজের approved email/password দিয়ে online login করুন। Backend আগে থেকে দেওয়া আছে।
+2. প্রথমবার online login ছাড়া offline access হয় না। নতুন install-এ কোনো fictional user/data নেই।
+3. Login করার পরে offline হলে ছয়টি calculator, saved records/CSV এবং cached component index/details ব্যবহার করা যায়। কোনো component-এর details আগে না খুললে সেটির বিস্তারিত report offline পাওয়া যাবে না।
+4. Offline saved calculation outbox-এ থাকে। Internet ফিরলে session/role server-এ যাচাই করে sync হয়; expired/revoked session হলে আবার login করতে হবে। Pending entries রাখা হয়।
+5. নতুন login/signup, approval, component edits, password changes, fresh reports/dashboard এবং অন্য user-এর latest updates-এর জন্য internet প্রয়োজন। Offline cached role শুধু local কাজ নিয়ন্ত্রণ করে; live write-এর অনুমতি server দেয়।
+6. Logout করলে cached session/details সরানো হয়; offline-এ পুনরায় login করা যায় না। Own pending records পরের online login-এর জন্য থাকে।
+7. Settings-এ শুধু appearance controls আছে। URL বদলাতে future trusted app update লাগবে।
 
 ## Offline calculation ও outbox
 
@@ -96,7 +95,7 @@ Live mode-এ প্রথম login internet-এ করুন। পরে app �
 
 Calculate → result দেখুন → চাইলে Record note → **Save calculation**। Offline live record `Pending` থাকবে; reconnect হলে নিজের একই account/backend-এর outbox sync হবে। Server result আবার calculate করে, owner নিজে নির্ধারণ করে এবং retry-তে একই ID দ্বিতীয়বার append করে না। **Records / Outbox**-এ status, retry এবং CSV আছে। Approval/token expired হলে online re-login করুন; pending record থাকে।
 
-Unsynced record থাকলে app uninstall বা Android app data clear করবেন না। আগে sync করুন বা CSV export রাখুন। Demo data ও pending records device-local।
+Unsynced record থাকলে app uninstall বা Android app data clear করবেন না। আগে sync করুন বা CSV export রাখুন। Pending records ও offline cache device-local।
 
 ## Calculation scope
 
@@ -127,29 +126,31 @@ Fresh CI debug builds may have different temporary signing keys, so installing o
 |---|---|---|
 | `Unexpected token '<'` in `EngineeringUI.gs` | HTML pasted into a Script file | Use HTML file `EngineeringUI.html`; remove wrong `.gs` after backup |
 | `Backend returned a webpage instead of API JSON` | Old deployment, missing API adapter, or Google sign-in/access page | Install all required `.gs` files; deploy New version; verify Me / Anyone and `/exec?api=ping` |
-| `Backend API version mismatch` | Endpoint is not the new version 1 adapter | Deploy matching backend files; correct Settings URL |
+| `Backend API version mismatch` | Endpoint is not the new version 1 adapter | Deploy matching backend files; verify the pinned backend URL in web/transport.js and rebuild |
 | `SESSION_EXPIRED` | Token expired or user approval was revoked | Reconnect and log in; Admin verifies approved role |
 | `You do not have permission` | Server rejected current role | Admin grants the intended role; Selection cannot save calculations/admin edit |
 | PC Google account redirect / phone Chrome only works in incognito | Google browser profile routing | Current Chrome primary-account fix applies to web app; APK uses own app login/API |
-| No workflow / Run workflow button | YAML absent from default branch or wrong filename | Create `.github/workflows/android.yml` on `main`; commit all source files |
+| No workflow / Run workflow button | YAML absent from default branch or wrong filename | Create exactly `.github/workflows/android.yml` on `main`; do not repeat `.github/workflows` |
 | `Cannot find package` / `npm ci` error | Files missing or lockfile mismatch | Upload original package.json AND package-lock.json at root; inspect actual install error |
 | `sdkmanager not found` / required platform unavailable | Runner SDK missing or Android repository unreachable | Use the supplied GitHub-hosted Ubuntu workflow; see SDK step logs, not a guessed version |
 | `Network is unreachable` / Gradle distribution redirect timeout (observed locally) | Local build environment could not reach Gradle download | Compile using supplied GitHub Actions; actual compile not locally verified |
 | `PKIX path building failed` / source lists unavailable (local SDK setup) | Vendor JDK truststore lacked environment CA | Use trusted environment CA; CI uses setup-java; never disable TLS verification |
 | SDK archive missing ZIP end directory (observed locally) | Download was truncated | Redownload and verify official SHA-256 before extraction; CI uses runner SDK |
 | `ERR_INTERNET_DISCONNECTED` on browser reload (fixed in this package) | Browser had no cached interface | This version caches public interface assets; visit online once; APK bundles assets locally |
+| `End of central directory record signature not found` during Playwright install (observed in this update) | Browser archive download truncated | Retry browser download; local checks used a separate Chromium Headless binary, CI uses Playwright install |
 | Chromium socket permission error (local QA environment) | Full Chrome process features restricted in test environment | Local QA passed using official Chromium Headless Shell; CI uses Playwright browser |
 | Android `App not installed` / conflicting package | Signature differs from older installed build | Sync/export first, uninstall older debug app; use same release keystore for production |
 | `Missing signing secret: ...` | Optional release selected without all secrets | Run debug unchecked, or add the specifically named secret |
 
-## Verified here / remaining checks
+## Verified for version 1.1.0
 
-- Nine shared/backend unit checks passed: identical module, calculations, input validation, role denial, recomputation, CSV safety and server ID/owner deduplication.
-- Real browser end-to-end checks passed: demo registration → pending → approval/login; component validation/entry; dashboard; selection report/print content; all six calculators; two CSV exports; Selection permission denial.
-- Simulated live API passed offline entry, reconnect sync, adding a second record during an ongoing sync, and cached offline restart. Those calls used fictional data and did not touch your real Sheet/accounts.
-- Four real screenshots (desktop/mobile, light/dark) were taken and visually inspected. Included in `evidence`.
-- Dependency installation, asset generation, Capacitor Android generation/plugins and workflow YAML parsing passed. SDK requirement was read from generated project files and installed locally.
-- **Not verified:** successful Gradle APK compile; actual Android installation, native print/share UI, production API after you install adapter, signed release and GitHub-hosted workflow execution. Do not treat source ZIP or screenshots as proof that Android compile succeeded.
+- Nine shared/backend unit checks passed: calculations, role denial, input validation, result recomputation, CSV safety, ID/owner deduplication.
+- Browser E2E passed against intercepted fictional API responses: clean install defaults Live, old Demo/custom URL migration, no backend/mode controls, signup/pending/approval/login, component validation, dashboard, component report print content, six calculators, CSV exports and role denial.
+- Offline cached component details, calculators, save/outbox, reconnect/session revalidation, two records including one saved during sync, and offline restart passed. Offline login and component mutation were denied.
+- Mobile/desktop light/dark screenshots taken and visually inspected locally. No actual user credentials or real Sheet writes were used in tests.
+- `npm ci`, asset build, generated Android project/plugins/version 1.1.0 and YAML parsing passed.
+- Local Playwright Chrome download returned a truncated ZIP. Local E2E instead ran using Chromium Headless from an npm-distributed test binary; the repository CI continues using Playwright's normal install.
+- Not verified in this update: new APK compile/install, real account login, Android native print/share and signed release. The user's previous version built successfully in GitHub Actions; this version still needs a new Actions run.
 
 ## Developer files / future corrections
 

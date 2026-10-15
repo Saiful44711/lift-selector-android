@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="shell.css">
 </head>
-<body><div id="shellBar"><span id="modeBadge">FICTIONAL DEMO</span><span id="connectionBadge"></span><button id="themeBtn" onclick="cycleTheme()" aria-label="Change theme">Theme</button><button id="settingsBtn" onclick="openSettings()">Settings</button></div>
+<body><div id="shellBar"><span id="modeBadge">LIVE DATA</span><span id="connectionBadge"></span><button id="themeBtn" onclick="cycleTheme()" aria-label="Change theme">Theme</button><button id="settingsBtn" onclick="openSettings()">Settings</button></div>
 
   <!-- ================= LOADING ================= -->
   <div id="loadingScreen" class="splash">
@@ -335,6 +335,6 @@
 
   <script src="logic.js"></script><script src="native.js"></script><script src="transport.js"></script><script src="app.js"></script>
 
-<dialog id="settingsDialog"><h2>App settings</h2><label for="settingMode">Data mode</label><select id="settingMode"><option value="demo">Fictional demo — no real data</option><option value="live">Live Google Sheets backend</option></select><label for="backendUrl">Apps Script production URL</label><input id="backendUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec"><p class="note">Use only your own trusted deployment. Changing backend or mode signs you out; pending live records stay tied to their original backend/account.</p><label for="themeSetting">Appearance</label><select id="themeSetting"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><label><input type="checkbox" id="motionSetting"> Subtle background effect</label><p id="settingsStatus" role="status"></p><div class="engineering-actions"><button class="btn" onclick="applySettings()">Apply settings</button><button class="btn ghost" onclick="document.getElementById('settingsDialog').close()">Close</button></div></dialog>
+<dialog id="settingsDialog"><h2>App settings</h2><p class="note">Live connection is preconfigured. Offline calculators and previously viewed component details are available after an online login. Account and data changes require internet.</p><label for="themeSetting">Appearance</label><select id="themeSetting"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><label><input type="checkbox" id="motionSetting"> Subtle background effect</label><p id="settingsStatus" role="status"></p><div class="engineering-actions"><button class="btn" onclick="applySettings()">Apply settings</button><button class="btn ghost" onclick="document.getElementById('settingsDialog').close()">Close</button></div></dialog>
 <dialog id="recordsDialog"><h2>Saved records &amp; outbox</h2><p id="recordStatus" role="status"></p><div class="engineering-actions"><button class="btn" onclick="syncOutbox()">Sync now</button><button class="btn ghost" onclick="exportRecords()">Export records CSV</button><button class="btn ghost" onclick="document.getElementById('recordsDialog').close()">Close</button></div><div id="recordsList"></div></dialog><div id="apkPrintArea"></div></body>
 </html>
